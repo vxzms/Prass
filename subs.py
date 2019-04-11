@@ -14,19 +14,30 @@ from tools import Timecodes
 from common import PrassError, zip, map, itervalues, iterkeys, iteritems, py2_unicode_compatible
 
 
-STYLES_SECTION = u"[V4+ Styles]"
-EVENTS_SECTION = u"[Events]"
-SCRIPT_INFO_SECTION = u"[Script Info]"
+STYLES_SECTION = "[V4+ Styles]"
+EVENTS_SECTION = "[Events]"
+SCRIPT_INFO_SECTION = "[Script Info]"
 
 
 def parse_ass_time(string):
-    hours, minutes, seconds, centiseconds = map(int, re.match(r"(\d+):(\d+):(\d+)\.(\d+)", string).groups())
-    return hours * 3600000 + minutes * 60000 + seconds * 1000 + centiseconds * 10
-
+    m = re.match(r"(\d+):(\d+):(\d+)\.(\d+)", string)
+    if m != None:
+        groups = m.groups()
+        hours, minutes, seconds, centiseconds = list(map(int, groups))
+        return hours * 3600000 + minutes * 60000 + seconds * 1000 + centiseconds * 10
+    else:
+        raise PrassError("____\nFailed to parse ass time in the following line:\n{0}\n____".format(string))
+    return None
 
 def parse_srt_time(string):
-    hours, minutes, seconds, milliseconds = map(int, re.match(r"(\d+):(\d+):(\d+)\,(\d+)", string).groups())
-    return hours * 3600000 + minutes * 60000 + seconds * 1000 + milliseconds
+    m = re.match(r"(\d+):(\d+):(\d+)\,(\d+)", string)
+    if m != None:
+        groups = m.groups()
+        hours, minutes, seconds, milliseconds = list(map(int, groups))
+        return hours * 3600000 + minutes * 60000 + seconds * 1000 + milliseconds
+    else:
+        raise PrassError("____\nFailed to parse ass time in the following line:\n{0}\n____".format(string))
+    return None
 
 def srt_line_to_ass(line, box=False):
     line = line.replace('\n', r'\N')
@@ -39,7 +50,7 @@ def srt_line_to_ass(line, box=False):
             if color.startswith('#'):
                 r, g, b = color[1:3], color[3:5], color[5:]
             elif webcolors:
-                r, g, b = map(lambda x: "%02X" % x, webcolors.name_to_rgb(color))
+                r, g, b = ["%02X" % x for x in webcolors.name_to_rgb(color)]
             else:
                 logging.warning('Can\'t parse color "%s", please install webcolors module.' % color)
                 break
@@ -49,7 +60,7 @@ def srt_line_to_ass(line, box=False):
 
 def format_time(ms):
     cs = int(ms / 10.0)
-    return u'{0}:{1:02d}:{2:02d}.{3:02d}'.format(
+    return '{0}:{1:02d}:{2:02d}.{3:02d}'.format(
             int(cs // 360000),
             int((cs // 6000) % 60),
             int((cs // 100) % 60),
@@ -86,7 +97,7 @@ class AssStyle(object):
         parts[19] = "%i" % (round(float(parts[19]) * scale_width))  # margin r
         parts[20] = "%i" % (round(float(parts[20]) * scale_height))  # margin v
 
-        self.definition = u",".join(parts)
+        self.definition = ",".join(parts)
 
 
 @py2_unicode_compatible
@@ -121,7 +132,7 @@ class AssEvent(object):
 
     @classmethod
     def from_text(cls, text):
-        kind, _, rest = text.partition(u":")
+        kind, _, rest = text.partition(":")
         split = [x.strip() for x in rest.split(',', 9)]
         return cls(
             kind=kind,
@@ -138,7 +149,7 @@ class AssEvent(object):
         )
 
     def __str__(self):
-        return u'{0}: {1},{2},{3},{4},{5},{6},{7},{8},{9},{10}'.format(self.kind, self.layer,
+        return '{0}: {1},{2},{3},{4},{5},{6},{7},{8},{9},{10}'.format(self.kind, self.layer,
                                                                        format_time(self.start),
                                                                        format_time(self.end),
                                                                        self.style, self.actor,
@@ -148,7 +159,7 @@ class AssEvent(object):
 
     @property
     def is_comment(self):
-        return self.kind.lower() == u'comment'
+        return self.kind.lower() == 'comment'
 
     def collides_with(self, other):
         if self.start < other.start:
@@ -161,14 +172,14 @@ class StylesSection(object):
         self.styles = OrderedDict()
 
     def parse_line(self, text):
-        if text.startswith(u'Format:'):
+        if text.startswith('Format:'):
             return
-        style = AssStyle.from_string(text.partition(u":")[2])
+        style = AssStyle.from_string(text.partition(":")[2])
         self.styles[style.name] = style
 
     def format_section(self):
-        lines = [u'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding']
-        lines.extend(u'Style: {0},{1}'.format(style.name, style.definition) for style in itervalues(self.styles))
+        lines = ['Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding']
+        lines.extend('Style: {0},{1}'.format(style.name, style.definition) for style in itervalues(self.styles))
         return lines
 
 
@@ -177,13 +188,13 @@ class EventsSection(object):
         self.events = []
 
     def parse_line(self, text):
-        if text.startswith(u'Format:'):
+        if text.startswith('Format:'):
             return
         self.events.append(AssEvent.from_text(text))
 
     def format_section(self):
-        lines = [u'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text']
-        lines.extend(u"%s" % x for x in self.events)
+        lines = ['Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text']
+        lines.extend("%s" % x for x in self.events)
         return lines
 
 
@@ -204,7 +215,7 @@ class ScriptInfoSection(object):
         def to_string(self):
             if self.value is None:
                 return self.name
-            return u"{0}: {1}".format(self.name, self.value)
+            return "{0}: {1}".format(self.name, self.value)
 
     def __init__(self):
         self._lines_dict = OrderedDict()
@@ -302,33 +313,33 @@ class AssScript(object):
                     force_last_section = current_section.parse_line(line)
                     continue
                 except Exception as e:
-                    raise PrassError(u"That's some invalid ASS script: {0}".format(e.message))
+                    raise PrassError("That's some invalid ASS script: {0}".format(e.message))
 
             if not line:
                 continue
             low = line.lower()
-            if low == u'[v4+ styles]':
+            if low == '[v4+ styles]':
                 current_section = StylesSection()
                 sections.append((line, current_section))
-            elif low == u'[events]':
+            elif low == '[events]':
                 current_section = EventsSection()
                 sections.append((line, current_section))
-            elif low == u'[script info]':
+            elif low == '[script info]':
                 current_section = ScriptInfoSection()
                 sections.append((line, current_section))
-            elif low == u'[graphics]' or low == u'[fonts]':
+            elif low == '[graphics]' or low == '[fonts]':
                 current_section = AttachmentSection()
                 sections.append((line, current_section))
             elif re.match(r'^\s*\[.+?\]\s*$', low):
                 current_section = GenericSection()
                 sections.append((line, current_section))
             elif not current_section:
-                raise PrassError(u"That's some invalid ASS script (no parse function at line {0})".format(idx))
+                raise PrassError("That's some invalid ASS script (no parse function at line {0})".format(idx))
             else:
                 try:
                     force_last_section = current_section.parse_line(line)
                 except Exception as e:
-                    raise PrassError(u"That's some invalid ASS script: {0}".format(e.message))
+                    raise PrassError("That's some invalid ASS script: {0}".format(e.message))
         return cls(sections)
 
     @classmethod
@@ -359,9 +370,9 @@ class AssScript(object):
                 end=parse_srt_time(times[1].lstrip()),
                 text=text
             ))
-        styles_section.styles[u'Default'] = AssStyle(u'Default', 'Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1')
+        styles_section.styles['Default'] = AssStyle('Default', 'Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1')
         script_info = ScriptInfoSection()
-        script_info.parse_line(u'; Script converted by Prass')
+        script_info.parse_line('; Script converted by Prass')
         script_info.set_resolution(384, 288)
         return cls([
             (SCRIPT_INFO_SECTION, script_info),
@@ -374,7 +385,7 @@ class AssScript(object):
         for name, section in self._sections_list:
             lines.append(name)
             lines.extend(section.format_section())
-            lines.append(u"")
+            lines.append("")
 
         file_object.write("\n".join(lines))
 

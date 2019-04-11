@@ -10,15 +10,15 @@ PY2 = sys.version_info[0] == 2
 if not PY2:
     py2_unicode_compatible = lambda x: x
 
-    itervalues = lambda x: iter(x.values())
-    iteritems = lambda x: iter(x.items())
-    iterkeys = lambda x: iter(x.keys())
+    itervalues = lambda x: iter(list(x.values()))
+    iteritems = lambda x: iter(list(x.items()))
+    iterkeys = lambda x: iter(list(x.keys()))
     zip = zip
     map = map
 else:
-    itervalues = lambda x: x.itervalues()
-    iteritems = lambda x: x.iteritems()
-    iterkeys = lambda x: x.iterkeys()
+    itervalues = lambda x: iter(x.values())
+    iteritems = lambda x: iter(x.items())
+    iterkeys = lambda x: iter(x.keys())
     import itertools
     zip = itertools.izip
     map = itertools.imap
