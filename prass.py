@@ -267,7 +267,9 @@ def cleanup(input_file, output_file, drop_comments, drop_empty_lines, drop_unuse
 @click.option("--end", "shift_end", default=False, is_flag=True, help="Shift only end time")
 @click.option("--multiplier", "multiplier", default="1", 
               help="Multiplies timings by the value to change speed. Value is a decimal or proper fraction")
-def shift(input_file, output_file, shift_by, shift_start, shift_end, multiplier):
+@click.option("--shift_frame", "shift_frame", default=False, is_flag=True, help="Shift by frame")
+@click.option("--fps", "fps", required=False, default="24000/1001", metavar="<float>", help="Shift by frame FPS, e.g. 24000/1001 or 23.976, default is 24000/1001")
+def shift(input_file, output_file, shift_by, shift_start, shift_end, multiplier, shift_frame, fps):
     """Shift all lines in a script by defined amount and/or change speed.
 
     \b
@@ -291,6 +293,12 @@ def shift(input_file, output_file, shift_by, shift_start, shift_end, multiplier)
     if not shift_start and not shift_end:
         shift_start = shift_end = True
 
+    if shift_frame is True:
+        fps = parse_fps_string(fps)
+        shift_by = str(int(shift_by) / float(fps))
+    else:
+        shift_by = shift_by
+    
     shift_ms = parse_shift_string(shift_by)
     multiplier = parse_fps_string(multiplier)
     if multiplier<0:
